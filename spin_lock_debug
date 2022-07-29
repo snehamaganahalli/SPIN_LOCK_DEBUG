@@ -1,0 +1,42 @@
+
+1)
+
+#define SPIN_LOCK_BH(x) {\
+spin_lock(x); \
+printk("holding spin lock in func: %s" __func__);  \\ trying to print after holding because, it will try to hold many times.
+}
+
+#define SPIN_UNLOCK_BH(x) {\
+printk("releasing spin lock in func: %s" __func__);
+spin_lock(x); \
+}
+
+By the above MACROs we can get the "function name" in which the spin lock was held or released.
+
+2) spin_lock()/spin_unlock()  // Calling this twice can cause crash. Or not calling this can also cause crash.
+
+3) Dead locks  
+// Spin lock should be held and released as quickly as possible. Check whether we are trying to hold the spin lock in loops which makes holding the spin-lock
+  for longer amount of time. Holding the spin lock for the long amount of time can cause CPU stalls.
+  
+4) CONFIG_DEBUG_SPINLOCK
+This is the kernel configuration. It should be enabled by the "make menuconfig"/"make kernel_menuconfig" command.
+Kernel will find the ugly spin_lock causing the problem for you.
+
+Steps:
+make kernel_menuconfig
+Enable CONFIG_DEBUG_SPINLOCK
+make -j8 V=e //compile
+
+5) spin_is_locked() // It is a linux API which tells that whether the particular lock is held or not. If a single spinlock is held for a long time,
+  then this API can be used to find that ugly spin_lock.
+  
+6) spin_lock should be paired with spin_unlock. And spin_lock_bh should be paired with spin_unlock_bh.
+   
+7) Same lock should not be used by both spin_lock() and spin_lock_bh()
+Eg:
+lock "x" is used with both spin_lock and spin_lock_bh
+spin_lock(x) and spin_unlock(x) / spin_lock_bh(x) and spin_unlock_bh(x)
+spin_lock_bh() will disable the bottom halves (softirqs) on that CPU when the lock is held.
+   
+8) check whether sleep/logs/prinks are called when spin_lock is held.
